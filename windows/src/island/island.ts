@@ -342,6 +342,10 @@ export class Island {
     this.fsm.pinned = false;
   }
 
+  get botEngine(): BotEngine {
+    return this.engine;
+  }
+
   // ── File drop ───────────────────────────────────────────────────────────────
 
   private onDragDrop(e: { type: string; paths?: string[] }) {

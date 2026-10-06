@@ -3,6 +3,7 @@
 // Difference from macOS: no terminal filter. On Windows the hook fires from any
 // terminal (Windows Terminal, VS Code, PowerShell…) and all of them are handled.
 
+import { Ease } from "../core/anim";
 import { Bridge, onEvent } from "../core/bridge";
 import { Sound } from "../core/sound";
 import { State } from "../core/state";
@@ -220,6 +221,7 @@ function handleHook(island: Island, payload: HookPayload) {
       ensurePill();
       State.setFocus(agentId);
       surface("overview", false);
+      island.botEngine.squash();
       Sound.play("work");
       break;
 
@@ -231,6 +233,8 @@ function handleHook(island: Island, payload: HookPayload) {
       const asked = payload.prompt ?? payload.message;
       if (asked) State.appendStep(agentId, asked.slice(0, 60));
       surface("overview", false);
+      island.botEngine.triggerEmote("surprised", 1.2);
+      Sound.play("work");
       break;
     }
 
@@ -241,16 +245,31 @@ function handleHook(island: Island, payload: HookPayload) {
       const tool = payload.tool_name ?? "Tool";
       State.appendStep(agentId, stepLabel(tool, payload.tool_input ?? {}));
       surface("overview", false);
+      if (tool === "run_command" || tool === "Bash" || tool === "PowerShell") {
+        island.botEngine.anim("oy", [[-0.1, 100, Ease.out], [0, 200, Ease.back]]);
+        island.botEngine.emit("spark", 3);
+      } else if (tool === "write_to_file" || tool === "replace_file_content" || tool === "multi_replace_file_content" || tool === "Write" || tool === "Edit") {
+        island.botEngine.triggerEmote("proud", 1.2);
+      } else if (tool === "search_web" || tool === "grep_search" || tool === "WebSearch" || tool === "Grep") {
+        island.botEngine.blink();
+      } else if (tool === "browser_subagent") {
+        island.botEngine.triggerEmote("wink", 1.4);
+      } else {
+        island.botEngine.squash();
+      }
       break;
     }
 
     case "PostToolUse":
       State.updateTask(agentId, "working");
+      island.botEngine.blink();
+      island.botEngine.emit("spark", 1);
       break;
 
     case "PostToolUseFailure":
       State.updateTask(agentId, "working");
       State.appendStep(agentId, "⚠ failed");
+      island.botEngine.triggerEmote("annoyed", 1.5);
       break;
 
     case "Notification": {
@@ -259,9 +278,11 @@ function handleHook(island: Island, payload: HookPayload) {
       if (lower.includes("rate limit") || lower.includes("limite d")) {
         State.updateTask(agentId, "ratelimit");
         Sound.play("rate");
+        island.botEngine.triggerEmote("annoyed", 2.0);
       } else if (message.endsWith("?")) {
         State.updateTask(agentId, "question");
         State.appendStep(agentId, message);
+        island.botEngine.triggerEmote("surprised", 1.8);
       }
       break;
     }
@@ -270,10 +291,13 @@ function handleHook(island: Island, payload: HookPayload) {
       State.updateTask(agentId, "finished");
       if (payload.message) State.appendStep(agentId, payload.message.slice(0, 60));
       Sound.play("finish");
+      island.botEngine.triggerEmote("happy", 3.0);
+      island.botEngine.emit("spark", 6);
+      island.botEngine.emit("heart", 3);
       if (focused) surface("finished", true);
       else State.setPillBadge(agentId, "finished");
       window.setTimeout(() => {
-        if (isExternalAgent) {
+        if (isExternalAgent && validAgent !== "antigravity") {
           State.removeTask(agentId);
         } else {
           State.updateTask(agentId, "idle");
@@ -285,12 +309,13 @@ function handleHook(island: Island, payload: HookPayload) {
     case "StopFailure":
       State.updateTask(agentId, "error");
       Sound.play("error");
+      island.botEngine.triggerEmote("annoyed", 2.0);
       if (focused) surface("error", true);
       else State.setPillBadge(agentId, "error");
       break;
 
     case "SessionEnd":
-      if (isExternalAgent) {
+      if (isExternalAgent && validAgent !== "antigravity") {
         State.removeTask(agentId);
       } else {
         State.updateTask(agentId, "idle");
@@ -300,10 +325,12 @@ function handleHook(island: Island, payload: HookPayload) {
 
     case "SubagentStart":
       State.appendStep(agentId, "+ subagent");
+      island.botEngine.emit("star", 3);
       break;
 
     case "SubagentStop":
       State.appendStep(agentId, "• subagent done");
+      island.botEngine.blink();
       break;
 
     case "PermissionRequest": {
