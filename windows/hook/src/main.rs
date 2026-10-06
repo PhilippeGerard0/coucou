@@ -152,21 +152,27 @@ fn read_event() -> Option<(String, String, String)> {
 
     // Antigravity & Gemini normalization
     if !map.contains_key("session_id") {
-        for key in ["conversationId", "conversation_id", "sessionId"] {
-            if let Some(sid) = map.get(key).and_then(|v| v.as_str()) {
-                map.insert("session_id".into(), serde_json::Value::String(sid.to_string()));
-                break;
-            }
+        let sid = ["conversationId", "conversation_id", "sessionId"]
+            .iter()
+            .find_map(|&k| map.get(k).and_then(|v| v.as_str()).map(str::to_string));
+        if let Some(s) = sid {
+            map.insert("session_id".into(), serde_json::Value::String(s));
         }
     }
 
     if !map.contains_key("tool_name") {
-        if let Some(tool_call) = map.get("toolCall").and_then(|v| v.as_object()) {
-            if let Some(tname) = tool_call.get("name").and_then(|v| v.as_str()) {
-                map.insert("tool_name".into(), serde_json::Value::String(tname.to_string()));
+        let extracted_tool = map.get("toolCall").and_then(|v| v.as_object()).map(|tool_call| {
+            let tname = tool_call.get("name").and_then(|v| v.as_str()).map(str::to_string);
+            let args_obj = tool_call.get("args").and_then(|v| v.as_object()).cloned();
+            (tname, args_obj)
+        });
+
+        if let Some((tname, args_obj)) = extracted_tool {
+            if let Some(name) = tname {
+                map.insert("tool_name".into(), serde_json::Value::String(name));
             }
             if !map.contains_key("tool_input") {
-                if let Some(args) = tool_call.get("args").and_then(|v| v.as_object()) {
+                if let Some(args) = args_obj {
                     let mut input = args.clone();
                     for (src, dst) in [
                         ("CommandLine", "command"),
