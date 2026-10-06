@@ -34,9 +34,24 @@ function validateAgent(raw: string | undefined): string | null {
   return raw;
 }
 
+const AGENT_NAMES: Record<string, string> = {
+  antigravity: "Antigravity",
+  gemini: "Gemini",
+  cursor: "Cursor",
+  codex: "Codex",
+};
+
+const AGENT_COLORS: Record<string, string> = {
+  antigravity: "#E879F9",
+  gemini: "#8AB4F8",
+  cursor: "#C0C4CC",
+  codex: "#2DD4BF",
+};
+
 const FALLBACK_COLORS = ["#22C55E", "#EAB308", "#60A5FA", "#E879F9"];
 
 function agentColor(name: string): string {
+  if (AGENT_COLORS[name]) return AGENT_COLORS[name];
   let h = 0;
   for (let i = 0; i < name.length; i++) {
     h = (Math.imul(31, h) + name.charCodeAt(i)) | 0;
@@ -76,18 +91,33 @@ const TOOL_LABELS: Record<string, string> = {
   MultiEdit: "Modifie",
   NotebookEdit: "Notebook",
   PowerShell: "Exécute",
+  // Antigravity & Cortex tools
+  run_command: "Exécute",
+  view_file: "Lit",
+  write_to_file: "Écrit",
+  replace_file_content: "Modifie",
+  multi_replace_file_content: "Modifie",
+  grep_search: "Recherche",
+  search_web: "Recherche web",
+  read_url_content: "Récupère",
+  list_dir: "Liste",
+  browser_subagent: "Navigateur",
+  ask_question: "Question",
+  generate_image: "Image",
+  manage_task: "Tâche",
+  schedule: "Planifie",
 };
 
 function stepLabel(tool: string, input: Record<string, unknown>): string {
   const label = TOOL_LABELS[tool] ?? tool;
   const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string) : null);
-  const cmd = str("command");
+  const cmd = str("command") ?? str("CommandLine");
   if (cmd) return `${label} · ${cmd.slice(0, 40)}`;
-  const path = str("path");
+  const path = str("path") ?? str("AbsolutePath") ?? str("DirectoryPath") ?? str("SearchPath");
   if (path) return `${label} · ${lastPathComponent(path)}`;
-  const file = str("file_path");
+  const file = str("file_path") ?? str("TargetFile") ?? str("FilePath");
   if (file) return `${label} · ${lastPathComponent(file)}`;
-  const query = str("query");
+  const query = str("query") ?? str("Query");
   if (query) return `${label} · ${query.slice(0, 40)}`;
   return label;
 }
@@ -176,7 +206,8 @@ function handleHook(island: Island, payload: HookPayload) {
   /** Ensure the agent pill exists (no-op for Claude Code). */
   const ensurePill = () => {
     if (isExternalAgent) {
-      State.upsertExternalAgent(agentId, validAgent!, agentColor(validAgent!));
+      const displayName = AGENT_NAMES[validAgent!] ?? validAgent!;
+      State.upsertExternalAgent(agentId, displayName, agentColor(validAgent!));
     } else {
       upsert(projectName, cwd);
     }

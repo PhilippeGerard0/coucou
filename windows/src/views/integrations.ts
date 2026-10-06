@@ -54,13 +54,13 @@ const OPEN_URLS: Record<string, string> = {
 };
 
 function idleCard(task: AgentTask, openSettings: () => void): HTMLElement {
+  const isAgent = task.source === "agent" || task.id.startsWith("agent_") || task.id === "integration_claude";
   const info = State.integrations[task.id];
-  const configured = info?.configured ?? false;
+  const configured = isAgent || (info?.configured ?? false);
   const error = info?.error ?? null;
-  // The Claude Code pill is about hooks, not a key — the macOS wording would be
-  // misleading here.
-  const missing = task.id === "integration_claude" ? "Hooks not installed" : "Key not configured";
-  const label = error ?? (configured ? "Connected · loading…" : missing);
+  // Local agents run via hooks, not cloud API keys.
+  const missing = isAgent ? "Hooks active" : "Key not configured";
+  const label = error ?? (isAgent ? "Hooks active · listening" : configured ? "Connected · loading…" : missing);
   const statusColor = error || !configured ? "#F4505E" : "#22C55E";
 
   const actions = h("div", { class: "int-actions" });

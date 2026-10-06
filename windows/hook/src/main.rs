@@ -45,7 +45,7 @@ mod unix;
 use unix::connect;
 
 fn main() {
-    let Some((payload, event)) = read_event() else { std::process::exit(0) };
+    let Some((payload, event, agent)) = read_event() else { std::process::exit(0) };
 
     let waits_for_answer = event == "PermissionRequest";
     let budget = if waits_for_answer { DECISION_BUDGET } else { FIRE_AND_FORGET_BUDGET };
@@ -64,8 +64,17 @@ fn main() {
             let mut out = std::io::stdout();
             let _ = writeln!(out, "{json}");
             let _ = out.flush();
+            std::process::exit(0);
         }
     }
+
+    // Antigravity and Gemini CLI lifecycle hooks expect a JSON response on stdout.
+    if agent == "antigravity" || agent == "gemini" {
+        let mut out = std::io::stdout();
+        let _ = writeln!(out, "{{}}");
+        let _ = out.flush();
+    }
+
     // Nothing printed: Claude Code asks in the terminal, as if we were not here.
     std::process::exit(0);
 }
@@ -86,8 +95,20 @@ fn decision_json(decision: &str) -> Option<String> {
     ))
 }
 
-/// Reads stdin and returns the payload to forward plus the event name.
-fn read_event() -> Option<(String, String)> {
+fn normalize_event(name: &str) -> String {
+    match name {
+        "PreInvocation" | "BeforeAgent" => "UserPromptSubmit".to_string(),
+        "PostInvocation" | "AfterTool" | "AfterModel" => "PostToolUse".to_string(),
+        "BeforeTool" | "BeforeToolSelection" => "PreToolUse".to_string(),
+        "AfterAgent" => "Stop".to_string(),
+        "startup" => "SessionStart".to_string(),
+        "exit" => "SessionEnd".to_string(),
+        other => other.to_string(),
+    }
+}
+
+/// Reads stdin and returns the payload to forward plus the event name and agent.
+fn read_event() -> Option<(String, String, String)> {
     let mut raw = Vec::new();
     if std::io::stdin().read_to_end(&mut raw).is_err() || raw.is_empty() {
         return None;
@@ -118,15 +139,57 @@ fn read_event() -> Option<(String, String)> {
     // Which agent this hook was installed for. Absent means Claude Code,
     // so existing hook commands keep working unchanged.
     if !agent.is_empty() {
-        map.insert("coucou_agent".into(), serde_json::Value::String(agent));
+        map.insert("coucou_agent".into(), serde_json::Value::String(agent.clone()));
     }
-    let event = map
+    let raw_event = map
         .get("hook_event_name")
         .and_then(|v| v.as_str())
         .map(str::to_string)
         .filter(|s| !s.is_empty())
         .unwrap_or(arg_event);
+    let event = normalize_event(&raw_event);
     map.insert("hook_event_name".into(), serde_json::Value::String(event.clone()));
+
+    // Antigravity & Gemini normalization
+    if !map.contains_key("session_id") {
+        for key in ["conversationId", "conversation_id", "sessionId"] {
+            if let Some(sid) = map.get(key).and_then(|v| v.as_str()) {
+                map.insert("session_id".into(), serde_json::Value::String(sid.to_string()));
+                break;
+            }
+        }
+    }
+
+    if !map.contains_key("tool_name") {
+        if let Some(tool_call) = map.get("toolCall").and_then(|v| v.as_object()) {
+            if let Some(tname) = tool_call.get("name").and_then(|v| v.as_str()) {
+                map.insert("tool_name".into(), serde_json::Value::String(tname.to_string()));
+            }
+            if !map.contains_key("tool_input") {
+                if let Some(args) = tool_call.get("args").and_then(|v| v.as_object()) {
+                    let mut input = args.clone();
+                    for (src, dst) in [
+                        ("CommandLine", "command"),
+                        ("TargetFile", "file_path"),
+                        ("FilePath", "file_path"),
+                        ("AbsolutePath", "path"),
+                        ("DirectoryPath", "path"),
+                        ("SearchPath", "path"),
+                        ("Path", "path"),
+                        ("Query", "query"),
+                        ("Url", "url"),
+                    ] {
+                        if let Some(v) = args.get(src) {
+                            if !input.contains_key(dst) {
+                                input.insert(dst.to_string(), v.clone());
+                            }
+                        }
+                    }
+                    map.insert("tool_input".into(), serde_json::Value::Object(input));
+                }
+            }
+        }
+    }
 
     for field in DROPPED_FIELDS {
         map.remove(*field);
@@ -138,7 +201,15 @@ fn read_event() -> Option<(String, String)> {
         .map(str::is_empty)
         .unwrap_or(true);
     if cwd_missing {
-        if let Ok(cwd) = std::env::current_dir() {
+        let ws_cwd = map
+            .get("workspacePaths")
+            .and_then(|v| v.as_array())
+            .and_then(|arr| arr.first())
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        if let Some(p) = ws_cwd {
+            map.insert("cwd".into(), serde_json::Value::String(p));
+        } else if let Ok(cwd) = std::env::current_dir() {
             map.insert(
                 "cwd".into(),
                 serde_json::Value::String(cwd.to_string_lossy().to_string()),
@@ -165,7 +236,7 @@ fn read_event() -> Option<(String, String)> {
 
     let mut line = payload.to_string();
     line.push('\n');
-    Some((line, event))
+    Some((line, event, agent))
 }
 
 /// Caps every string in the payload. A single Write can carry a whole file.
@@ -252,5 +323,14 @@ mod tests {
         let s = v["tool_input"]["content"].as_str().unwrap();
         assert!(s.len() <= MAX_FIELD_LEN + 4);
         assert!(s.ends_with('…'));
+    }
+
+    #[test]
+    fn event_normalization_maps_antigravity_events() {
+        assert_eq!(normalize_event("PreInvocation"), "UserPromptSubmit");
+        assert_eq!(normalize_event("PostInvocation"), "PostToolUse");
+        assert_eq!(normalize_event("PreToolUse"), "PreToolUse");
+        assert_eq!(normalize_event("PostToolUse"), "PostToolUse");
+        assert_eq!(normalize_event("Stop"), "Stop");
     }
 }
