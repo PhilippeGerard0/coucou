@@ -18,4 +18,5 @@ DerivedData/
 
 # Local only (never published)
 .claude/
+.agents/
 _prive/

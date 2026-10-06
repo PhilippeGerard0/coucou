@@ -132,24 +132,48 @@ fn open_url(url: String) {
     platform::open_url(&url);
 }
 
-/// "Open terminal" opens the working folder in VS Code when `code` is on PATH,
+/// "Open terminal" opens the working folder in VS Code or Antigravity IDE when found,
 /// and falls back to the file manager otherwise.
 #[tauri::command]
-fn open_in_vscode(path: Option<String>) -> bool {
-    // No shell anywhere near this. The path is a project folder chosen by
-    // whoever is using Claude Code, and a shell would happily read `&`, `^`, `%`
-    // or `$` in a folder name as syntax. Finding the launcher ourselves and
-    // handing the path over as a separate argument keeps it a path.
+fn open_in_vscode(path: Option<String>, editor: Option<String>) -> bool {
     let path = path.filter(|p| !p.is_empty());
-    // It arrives in a hook payload: only an existing folder, given by its full
-    // path, goes any further. `code` would read `--something` as an option, and
-    // xdg-open would launch a file with whatever handles its type.
     if let Some(p) = path.as_deref() {
         let p = std::path::Path::new(p);
         if !(p.is_absolute() && p.is_dir()) {
             return false;
         }
     }
+
+    if editor.as_deref() == Some("antigravity") {
+        #[cfg(windows)]
+        {
+            if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+                let agy_exe = std::path::PathBuf::from(local_app_data)
+                    .join("Programs")
+                    .join("Antigravity IDE")
+                    .join("Antigravity IDE.exe");
+                if agy_exe.exists() {
+                    let mut cmd = Command::new(agy_exe);
+                    if let Some(p) = path.as_deref() {
+                        cmd.arg(p);
+                    }
+                    if platform::no_console(&mut cmd).spawn().is_ok() {
+                        return true;
+                    }
+                }
+            }
+        }
+        if let Some(agy) = platform::find_on_path("agy").or_else(|| platform::find_on_path("antigravity")) {
+            let mut cmd = Command::new(agy);
+            if let Some(p) = path.as_deref() {
+                cmd.arg(p);
+            }
+            if platform::no_console(&mut cmd).spawn().is_ok() {
+                return true;
+            }
+        }
+    }
+
     if let Some(code) = platform::find_on_path("code") {
         let mut cmd = Command::new(code);
         if let Some(p) = path.as_deref() {

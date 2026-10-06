@@ -366,17 +366,22 @@ function buildError(actions: ViewActions): ViewHost {
 function buildFinished(actions: ViewActions): ViewHost {
   const who = h("div");
   const title = h("div", { class: "title" });
+  const openBtn = btn("Open terminal", "primary", () => actions.openTerminal());
   const row = h("div", { class: "actions" },
-    btn("Open terminal", "primary", () => actions.openTerminal()),
+    openBtn,
     btn("OK", "secondary", () => actions.collapse()),
   );
   const el = h("div", { class: "view" }, card("green", stack(116, 16, who, title, row)));
   return {
     el,
     sync() {
+      const task = State.focusTask;
+      const isAgy = task?.id === "agent_antigravity";
       clear(who);
-      who.append(agentWho(State.focusTask, "Claude Code finished"));
-      title.textContent = State.focusTask?.steps.at(-1) ?? "Session finished";
+      who.append(agentWho(task, isAgy ? "Antigravity finished" : "Claude Code finished"));
+      title.textContent = task?.steps.at(-1) ?? "Session finished";
+      const lbl = openBtn.querySelector("span");
+      if (lbl) lbl.textContent = isAgy ? "Open Antigravity" : "Open terminal";
     },
   };
 }

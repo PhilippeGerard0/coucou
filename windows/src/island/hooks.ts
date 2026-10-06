@@ -208,6 +208,8 @@ function handleHook(island: Island, payload: HookPayload) {
     if (isExternalAgent) {
       const displayName = AGENT_NAMES[validAgent!] ?? validAgent!;
       State.upsertExternalAgent(agentId, displayName, agentColor(validAgent!));
+      const t = State.tasks.find((x) => x.id === agentId);
+      if (t && cwd) t.sessionCwd = cwd;
     } else {
       upsert(projectName, cwd);
     }
@@ -216,12 +218,14 @@ function handleHook(island: Island, payload: HookPayload) {
   switch (name) {
     case "SessionStart":
       ensurePill();
+      State.setFocus(agentId);
       surface("overview", false);
       Sound.play("work");
       break;
 
     case "UserPromptSubmit": {
       ensurePill();
+      State.setFocus(agentId);
       State.updateTask(agentId, "thinking");
       // The field is `prompt`; reading `message` meant this step was always blank.
       const asked = payload.prompt ?? payload.message;
@@ -232,6 +236,7 @@ function handleHook(island: Island, payload: HookPayload) {
 
     case "PreToolUse": {
       ensurePill();
+      State.setFocus(agentId);
       State.updateTask(agentId, "working");
       const tool = payload.tool_name ?? "Tool";
       State.appendStep(agentId, stepLabel(tool, payload.tool_input ?? {}));

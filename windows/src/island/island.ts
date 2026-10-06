@@ -112,8 +112,10 @@ export class Island {
         Sound.play("blip");
       },
       openTerminal: () => {
-        const cwd = State.focusTask?.sessionCwd ?? null;
-        void Bridge.openInVSCode(cwd);
+        const task = State.focusTask;
+        const cwd = task?.sessionCwd ?? null;
+        const editor = task?.id === "agent_antigravity" ? "antigravity" : null;
+        void Bridge.openInVSCode(cwd, editor);
       },
       // The ↗ button — same targets as openAgentTarget() on macOS.
       openTarget: () => {
@@ -128,6 +130,7 @@ export class Island {
           integration_calcom: "https://app.cal.com/bookings",
         };
         if (task.id === "integration_claude") void Bridge.openInVSCode(task.sessionCwd ?? null);
+        else if (task.id === "agent_antigravity") void Bridge.openInVSCode(task.sessionCwd ?? null, "antigravity");
         else if (task.id === "integration_n8n") void Bridge.openN8n();
         else if (urls[task.id]) void Bridge.openUrl(urls[task.id]);
       },
