@@ -6,7 +6,7 @@
 
 **Mochi doesn't get a notch on a PC — so it lives at the top of your screen instead.**
 
-Approve Claude Code permissions, watch your session work, drop a file, chat with Claude, keep an eye on your services — without leaving what you're doing.
+Approve Claude Code permissions, follow your Claude Code and Antigravity agent sessions work, drop a file, chat with Claude, keep an eye on your services — without leaving what you're doing.
 
 ![Windows 10/11](https://img.shields.io/badge/Windows-10%2F11-0078D4?logo=windows)
 ![Tauri 2](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=black)
@@ -48,7 +48,7 @@ installs for the current user only — no admin prompt.
 | Tray icon | Open, Settings…, Pause, Quit |
 
 Everything else happens on its own: a Claude Code permission request opens the
-island with **Deny / Allow**, a finished session shows what it did, and
+island with **Deny / Allow**, active Claude Code and Antigravity sessions show what they do in real-time with auto-focus and dynamic animations, a finished session shows its summary, and
 your integrations sit in the coloured pills next to Mochi.
 
 ## Claude Code
@@ -67,6 +67,14 @@ never blocked or slowed down by Coucou.** If nobody answers a permission request
 in time, Coucou stays quiet and Claude Code asks in the terminal as usual.
 
 It works from any terminal — Windows Terminal, PowerShell, VS Code, Git Bash.
+
+## Antigravity (IDE & CLI)
+
+Coucou on Windows features first-class native support for **Antigravity** (both the Antigravity IDE and `agy` CLI):
+
+- **Dedicated pill & auto-focus**: Antigravity has a permanent `#E879F9` pill. Whenever a session starts or runs tools, the island automatically shifts focus to Antigravity with rich dynamic animations, active glowing states, and live step tickers.
+- **Relay normalization**: `coucou-hook.exe` automatically detects Antigravity events (`conversationId`, `toolCall`), normalizes them to canonical Coucou events, and responds with `{}` JSON on stdout to strictly fulfill Antigravity's hook protocol.
+- **Direct IDE Launch**: The finished and idle views offer an **Open Antigravity IDE** button to launch `Antigravity IDE.exe` directly at your current workspace.
 
 ## Chat and keys
 
@@ -144,7 +152,8 @@ problems. It stays on your machine.
   VS Code sessions.
 - Not in this version: sending a file by email, dragging Mochi onto a window to
   attach it as context, and jumping to a specific terminal window — "Open
-  terminal" opens the working folder in VS Code when `code` is on your `PATH`.
+  terminal" opens the working folder in VS Code when `code` is on your `PATH`,
+  while Antigravity sessions can launch the Antigravity IDE directly via "Open Antigravity IDE".
 - Cal.com shows the next bookings as a list rather than the Mac's calendar.
 
 ## Linux

@@ -153,7 +153,7 @@ The first Linux build is out as a beta: download it from [Coucou for Linux 0.1.1
 - **Debian / Ubuntu**: `sudo apt install ./Coucou-Linux-*.deb`
 - **Fedora / openSUSE**: `sudo dnf install ./Coucou-Linux-*.rpm`
 
-Check a download with `sha256sum -c SHA256SUMS --ignore-missing`. Gemini CLI, Antigravity, Google AI, OpenAI and local model (Ollama / LM Studio) chat are macOS only for now.
+Check a download with `sha256sum -c SHA256SUMS --ignore-missing`. Gemini CLI, Google AI, OpenAI and local model (Ollama / LM Studio) chat are macOS only for now (Antigravity is supported on macOS and Windows).
 
 The island sits on the top edge on compositors with layer-shell — COSMIC, KDE
 Plasma, Hyprland, Sway and other wlroots compositors. GNOME has no layer-shell,
@@ -203,7 +203,7 @@ Click the Coucou icon in the menu bar (macOS) or in the system tray (Windows, Li
 | **Claude Code hooks** | live sessions and approvals | **Install hooks** — Coucou backs up `~/.claude/settings.json`, merges its hooks and shows you the diff before writing anything |
 | **Claude plan** *(macOS, GitHub build)* | Plan usage gauge in the notch header | **Install relay** in Settings → Agents → Plan usage, then enable "Show in the notch" |
 | **Gemini CLI hooks** *(macOS)* | Gemini CLI sessions in the island | **Install hooks** in Settings → Gemini CLI — backs up `~/.gemini/settings.json` |
-| **Antigravity (agy) hooks** *(macOS)* | agy sessions in the island | **Install hooks** in Settings → Antigravity — backs up `~/.gemini/config/hooks.json` |
+| **Antigravity (agy / IDE) hooks** *(macOS, Windows)* | agy and Antigravity IDE sessions in the island, auto-focus, direct IDE launch | **Install hooks** in Settings → Antigravity (macOS) or configure in `~/.gemini/config/hooks.json` / Windows relay |
 | **Anthropic API key** | chat and questions about files | Settings → Anthropic API · Keychain / Windows Credential Manager / Secret Service |
 | **Google AI API key** *(macOS)* | chat with Google AI (Gemini) | Settings → Chat — other providers · Keychain |
 | **OpenAI API key** *(macOS)* | chat with OpenAI | Settings → Chat — other providers · Keychain |
@@ -250,7 +250,7 @@ The macOS app is native Swift 6 / SwiftUI / AppKit with **zero third-party depen
 **Windows**
 
 - A [Tauri 2](https://tauri.app) app (Rust + TypeScript): the island is a transparent, always-on-top window that never steals focus, Mochi is drawn in Canvas 2D with the same shapes, timings and sounds as on the Mac.
-- Claude Code hooks go through a tiny `coucou-hook.exe` and a named pipe; keys live in Windows Credential Manager.
+- Claude Code and Antigravity (IDE & CLI) hooks go through a tiny `coucou-hook.exe` and a named pipe, with auto-focus on active tasks and direct Antigravity IDE launch; keys live in Windows Credential Manager.
 - Details and differences in [`windows/README.md`](windows/README.md).
 
 **Linux**

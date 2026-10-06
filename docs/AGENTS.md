@@ -119,12 +119,13 @@ Coucou events automatically.
 
 `AfterModel` is not installed — it fires on every response chunk and would flood the island.
 
-### Antigravity — `agy` (macOS)
+### Antigravity — `agy` & Antigravity IDE (macOS, Windows)
 
-Coucou supports Antigravity out of the box via **Settings → Antigravity → Install hooks**.
-The installer writes to `~/.gemini/config/hooks.json` (timeouts in seconds) and uses
-`--agent antigravity`. The relay translates `toolCall.name` / `conversationId` to the
-island's `tool_name` / `session_id`.
+Coucou supports Antigravity out of the box on macOS and Windows:
+- **macOS**: Install hooks via **Settings → Antigravity → Install hooks**, which writes to `~/.gemini/config/hooks.json` and uses `--agent antigravity`.
+- **Windows**: The `coucou-hook.exe` relay automatically detects and normalizes Antigravity IDE and CLI payloads (`conversationId`, `toolCall`), responds with `{}` JSON to conform to the hook contract, auto-focuses the island card on Antigravity with rich animations, and provides direct "Open Antigravity IDE" launching.
+
+The relay translates `toolCall.name` / `conversationId` to the island's `tool_name` / `session_id`.
 
 | Antigravity event | Canonical event |
 |---|---|
